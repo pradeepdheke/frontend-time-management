@@ -3,7 +3,7 @@ import "./App.css";
 import { Button, Container } from "react-bootstrap";
 import { AddTaskForm } from "./components/AddTaskForm";
 import { ListArea } from "./components/ListArea";
-import { fetchTasks } from "./components/helper/axiosHelper";
+import { deleteServerTask, fetchTasks, postTask, switchServerTask } from "./components/helper/axiosHelper";
 
 const wklyHr = 7 * 24;
 
@@ -18,44 +18,37 @@ function App() {
 
   const getTaskFromServer = async () => {
     const data = await fetchTasks()
-    console.log(data)
     data.status === "success" && setTaskList(data.result)
   }
 
   const totat = taskList.reduce((acc, itme) => acc + +itme.hr, 0);
 
-  const addTask = (task) => {
+  const addTask = async (task) => {
     if (totat + +task.hr > wklyHr) {
       return alert(
         "Sorry sir, you don't have enough time left to fit this task."
       );
     }
-    setTaskList([...taskList, task]);
+    // send data to the server
+    const result = await postTask(task)
+    result.status === "success" && getTaskFromServer()
   };
 
-  const switchTask = (id, type) => {
-    console.log(id, type);
+  const switchTask = async (_id, type) => {
+    const data = await switchServerTask({_id, type})
 
-    const switchedArg = taskList.map((item, index) => {
-      if (item.id === id) {
-        item.type = type;
-      }
-
-      return item;
-    });
-
-    setTaskList(switchedArg);
+    data.status === "success" && getTaskFromServer()
   };
 
   const handleOnCheck = (e) => {
     const { checked, value, name } = e.target;
-    console.log(checked, value, name);
+    
 
     if (value === "entry" || value === "bad") {
       let toDeleteIds = [];
       taskList.forEach((item) => {
         if (item.type === value) {
-          toDeleteIds.push(item.id);
+          toDeleteIds.push(item._id);
         }
       });
       if (checked) {
@@ -66,7 +59,7 @@ function App() {
       } else {
         // romve all entry list ids
         console.log("now remove the ids");
-        const tempArgs = ids.filter((id) => !toDeleteIds.includes(id));
+        const tempArgs = ids.filter((_id) => !toDeleteIds.includes(_id));
         setIds(tempArgs);
       }
       return;
@@ -79,20 +72,24 @@ function App() {
     } else {
       // remove individual item id
 
-      const filteredArg = ids.filter((id) => id !== value);
+      const filteredArg = ids.filter((_id) => _id !== value);
       setIds(filteredArg);
     }
   };
 
-  const handleOnDelete = () => {
+  const handleOnDelete = async () => {
     if (
       !window.confirm("Are you sure you want to delete the selected items?")
     ) {
       return;
     }
-    const tempArg = taskList.filter((item) => !ids.includes(item.id));
-    setTaskList(tempArg);
-    setIds([]);
+    
+    const data = await deleteServerTask(ids)
+  
+   if (data.status === "success") {
+    getTaskFromServer()
+    setIds([]) 
+  }   
   };
 
   return (
