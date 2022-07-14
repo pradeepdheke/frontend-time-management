@@ -41,7 +41,7 @@ function App() {
   };
 
   const handleOnCheck = (e) => {
-    const { checked, value, name } = e.target;
+    const { checked, value } = e.target;
     
 
     if (value === "entry" || value === "bad") {
